@@ -1,11 +1,21 @@
 import { Link } from "react-router-dom";
-
+import logo from "../assets/logo.png";
 function Navbar() {
   return (
     <div className="w-full bg-gray-800 text-white px-8 py-4 flex justify-between items-center shadow-md">
 
       {/* Logo */}
-      <h1 className="text-xl font-bold">SymmetriCare</h1>
+      <div className="flex items-center gap-2 font-bold text-xl">
+
+        <img
+          src={logo}
+          alt="logo"
+          className="w-9 h-9"
+        />
+
+        SymmetriCare
+
+      </div>
 
       {/* Links */}
       <div className="space-x-6">
