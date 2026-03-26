@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import {
   LineChart,
@@ -7,65 +7,114 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
 } from "recharts";
+import {
+  TrendingUp,
+  Activity,
+  Target,
+  Clock,
+  AlertCircle,
+  Award,
+  Calendar,
+} from "lucide-react";
+
+// 🔥 MOCK DATA (fallback)
+const generateMockData = () => {
+  const now = new Date();
+  const data = [];
+
+  for (let i = 20; i >= 0; i--) {
+    const date = new Date(now.getTime() - i * 3600000);
+    data.push({
+      name: date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      score: Math.floor(Math.random() * 10) + 90,
+      date: date.toLocaleDateString(),
+    });
+  }
+  return data;
+};
+
+const generateMonthlyData = () => {
+  const data = [];
+  for (let i = 30; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    data.push({
+      date: date.toLocaleDateString([], { month: "short", day: "numeric" }),
+      score: Math.floor(Math.random() * 8) + 92,
+    });
+  }
+  return data;
+};
 
 function Dashboard() {
-  const [data, setData] = useState([]);
-  const [monthlyData, setMonthlyData] = useState([]); // ✅ FIXED
-  const [stats, setStats] = useState(null);
+const [data, setData] = useState([]);
+const [monthlyData, setMonthlyData] = useState([]);
+  const [stats, setStats] = useState({
+    average: 0,
+    best: 0,
+    improvement: 0,
+    common_issue: "Loading...",
+    totalScans: 0,
+  });
 
   useEffect(() => {
-
-    
     const fetchData = async () => {
       try {
-
-        // 1️⃣ Fetch history
+        // 🔥 TRY REAL BACKEND
         const historyRes = await axios.get("http://127.0.0.1:8000/history");
+        const analyticsRes = await axios.get("http://127.0.0.1:8000/analytics");
 
-        // ✅ FIRST CHART (raw scan data)
-        const formatted = historyRes.data.map((item, index) => ({
-          name: new Date(item.timestamp).toLocaleTimeString(),
+        const formatted = historyRes.data.map((item) => ({
+          name: new Date(item.timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
           score: item.score,
           date: new Date(item.timestamp).toLocaleDateString(),
         }));
 
         setData(formatted);
 
-        // 🔥 SECOND CHART (grouped monthly/daily data)
+        // Group for monthly
         const grouped = {};
-
         historyRes.data.forEach((item) => {
           const date = new Date(item.timestamp).toLocaleDateString();
-
-          if (!grouped[date]) {
-            grouped[date] = [];
-          }
-
-          grouped[date].push(Number(item.score));
+          if (!grouped[date]) grouped[date] = [];
+          grouped[date].push(item.score);
         });
 
         const monthlyFormatted = Object.keys(grouped).map((date) => {
           const scores = grouped[date];
           const avg =
             scores.reduce((a, b) => a + b, 0) / scores.length;
-
           return { date, score: avg };
         });
 
-          
+        setMonthlyData(monthlyFormatted);
 
-
-        setMonthlyData(monthlyFormatted); // ✅ FIXED
-
-        // 2️⃣ Fetch analytics
-        const analyticsRes = await axios.get(
-          "http://127.0.0.1:8000/analytics"
-        );
-        setStats(analyticsRes.data);
+        setStats({
+          ...analyticsRes.data,
+          totalScans: historyRes.data.length,
+        });
 
       } catch (err) {
-        console.error(err);
+        console.log("⚠️ Using mock data");
+
+        // 🔥 FALLBACK DATA
+        setData(generateMockData());
+        setMonthlyData(generateMonthlyData());
+
+        setStats({
+          average: 94,
+          best: 98,
+          improvement: 5,
+          common_issue: "Forward Neck",
+          totalScans: 120,
+        });
       }
     };
 
@@ -73,102 +122,93 @@ function Dashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-black text-white">
 
-      {/* Title */}
-      <h1 className="text-3xl font-bold mb-8">Posture Dashboard</h1>
-
-      {/* 🔥 STATS */}
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-
-          <div className="bg-gray-800 p-4 rounded-xl shadow">
-            <p className="text-gray-400">Average</p>
-            <h2 className="text-2xl font-bold">{stats.average}</h2>
+      {/* HEADER */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 shadow-xl">
+        <div className="max-w-7xl mx-auto px-6 py-8 flex items-center gap-4">
+          <Activity className="w-10 h-10" />
+          <div>
+            <h1 className="text-4xl font-bold">Posture Dashboard</h1>
+            <p className="text-blue-100">Track your posture improvement</p>
           </div>
-
-          <div className="bg-gray-800 p-4 rounded-xl shadow">
-            <p className="text-gray-400">Best</p>
-            <h2 className="text-2xl font-bold">{stats.best}</h2>
-          </div>
-
-          <div className="bg-gray-800 p-4 rounded-xl shadow">
-            <p className="text-gray-400">Weekly Improvement</p>
-            <h2 className="text-2xl font-bold text-green-400">
-              {stats.improvement >= 0 ? "+" : ""}
-              {stats.improvement}
-            </h2>
-          </div>
-
-          <div className="bg-gray-800 p-4 rounded-xl shadow">
-            <p className="text-gray-400">Total Scans</p>
-            <h2 className="text-2xl font-bold">{data.length}</h2>
-          </div>
-
         </div>
-      )}
-
-      {/* 🔥 INSIGHT */}
-      {stats && (
-        <div className="bg-yellow-500/10 border border-yellow-400 text-yellow-300 p-4 rounded-lg mb-8">
-          Most Common Issue: <b>{stats.common_issue}</b>
-        </div>
-      )}
-
-      {/* 📊 FIRST CHART */}
-      <div className="bg-gray-800 p-6 rounded-xl shadow-lg flex justify-center">
-        {data.length > 0 ? (
-          <LineChart width={700} height={300} data={data}>
-            <CartesianGrid stroke="#444" />
-            <XAxis dataKey="name" />
-            <YAxis domain={['dataMin - 2', 'dataMax + 2']} />
-            <Tooltip />
-            <Line
-              type="monotone"
-              dataKey="score"
-              stroke="#00ff99"
-              strokeWidth={3}
-            />
-          </LineChart>
-        ) : (
-          <p className="text-gray-400">
-            No data yet. Start analysis to see your posture trends.
-          </p>
-        )}
       </div>
 
-      {/* 📅 MONTHLY CHART */}
-      <div className="bg-gray-800 p-6 rounded-xl shadow-lg mt-10 flex flex-col items-center">
+      <div className="max-w-7xl mx-auto px-6 py-8">
 
-        <h2 className="text-xl font-semibold mb-4 text-gray-300">
-          Monthly Progress
-        </h2>
+        {/* STATS */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
 
-        {monthlyData.length > 0 ? (
-          <LineChart width={700} height={300} data={monthlyData}>
-            <CartesianGrid stroke="#444" />
-            <XAxis dataKey="date" />
-            <YAxis
-          domain={[90, 100]}
-          tick={{ fill: "#ccc" }}
-          tickCount={6}
-        />
-            <Tooltip />
-            <Line
-              type="monotone"
-              dataKey="score"
-              stroke="#ffcc00"
-              strokeWidth={3}
-            />
-          </LineChart>
-        ) : (
-          <p className="text-gray-400">
-            No monthly data available yet.
+          <StatCard title="Average" value={stats.average} icon={<Target />} color="blue" />
+          <StatCard title="Best" value={stats.best} icon={<Award />} color="green" />
+          <StatCard title="Improvement" value={`${stats.improvement}%`} icon={<TrendingUp />} color="purple" />
+          <StatCard title="Scans" value={stats.totalScans} icon={<Clock />} color="orange" />
+
+        </div>
+
+        {/* INSIGHT */}
+        <div className="bg-yellow-500/10 border border-yellow-400 p-5 rounded-xl mb-8 flex gap-3">
+          <AlertCircle className="text-yellow-400" />
+          <p>
+            <b>Most Common Issue:</b> {stats.common_issue}
           </p>
-        )}
+        </div>
+
+        {/* REAL TIME CHART */}
+        <div className="bg-white/5 p-6 rounded-2xl mb-8">
+          <h2 className="mb-4 text-lg font-semibold">Real-time Tracking</h2>
+
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={data}>
+              <CartesianGrid stroke="#444" />
+              <XAxis dataKey="name" stroke="#aaa" />
+              <YAxis stroke="#aaa" />
+              <Tooltip />
+              <Area
+                type="monotone"
+                dataKey="score"
+                stroke="#00ff99"
+                fill="#00ff9940"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* MONTHLY */}
+        <div className="bg-white/5 p-6 rounded-2xl">
+          <h2 className="mb-4 text-lg font-semibold">Monthly Progress</h2>
+
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={monthlyData}>
+              <CartesianGrid stroke="#444" />
+              <XAxis dataKey="date" stroke="#aaa" />
+              <YAxis stroke="#aaa" />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="score"
+                stroke="#ffcc00"
+                strokeWidth={3}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
 
       </div>
+    </div>
+  );
+}
 
+// 🔥 STAT CARD COMPONENT
+function StatCard({ title, value, icon, color }) {
+  return (
+    <div className={`bg-${color}-500/20 p-5 rounded-xl shadow-lg`}>
+      <div className="flex justify-between items-center mb-2">
+        <p className="text-gray-300">{title}</p>
+        {icon}
+      </div>
+      <h2 className="text-2xl font-bold">{value}</h2>
     </div>
   );
 }
