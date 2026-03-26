@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import Analyze from "./pages/Analyze";
 import Resources from "./pages/Resources";
 import Navbar from "./components/Navbar";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/analyze" element={<Analyze />} />
         <Route path="/resources" element={<Resources />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </div>
   );

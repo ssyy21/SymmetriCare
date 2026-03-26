@@ -30,8 +30,8 @@ function Analyze() {
       setMessages(res.data.message);
 
     } catch (err) {
-      console.error(err);
-    }
+  console.error("API ERROR:", err.response?.data || err.message);
+}
   };
 
   const downloadReport = async () => {
@@ -69,6 +69,20 @@ function Analyze() {
   }
 };
 
+
+const handleToggle = async () => {
+  if (isRunning) {
+    // STOP → save session
+    try {
+      await axios.post("http://127.0.0.1:8000/end-session");
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  setIsRunning(!isRunning);
+};
+
   // 🔁 Real-time loop
   useEffect(() => {
     let interval;
@@ -97,8 +111,11 @@ function Analyze() {
       {/* BUTTON */}
       <div className="flex gap-4 mt-4">
 
+
+  
+
   <button
-    onClick={() => setIsRunning(!isRunning)}
+    onClick={handleToggle}
     className="px-6 py-2 bg-blue-500 rounded-lg hover:bg-blue-600"
   >
     {isRunning ? "Stop Analysis" : "Start Analysis"}

@@ -1,11 +1,40 @@
 from fastapi import FastAPI, UploadFile, File
 import cv2
 import numpy as np
-
+import base64
 from fastapi.responses import FileResponse
 from pose.mediapipe_model import get_pose_landmarks
 from features.feature_extraction import extract_features
 from scoring.scoring import calculate_score
+import sqlite3
+from datetime import datetime
+from collections import Counter
+from datetime import timedelta
+
+conn = sqlite3.connect("posture.db", check_same_thread=False)
+cursor = conn.cursor()
+
+session_scores = []
+
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS posture_data (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    score REAL,
+    neck_tilt REAL,
+    shoulder_diff REAL,
+    spine_angle REAL,
+    timestamp TEXT
+)
+""")
+
+try:
+    cursor.execute("ALTER TABLE posture_data ADD COLUMN hip_diff REAL")
+except:
+    pass
+
+conn.commit()
+
 
 app = FastAPI()
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,13 +46,91 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.post("/end-session")
+def end_session():
+    if not session_scores:
+        return {"message": "No data"}
+
+    avg_score = sum(session_scores) / len(session_scores)
+
+    cursor.execute("""
+    INSERT INTO posture_data (score, timestamp)
+    VALUES (?, ?)
+    """, (avg_score, datetime.now().isoformat()))
+
+    conn.commit()
+
+    session_scores.clear()
+
+    return {"avg_score": avg_score}
 @app.get("/")
 def home():
     return {"message": "SymmetriCare Backend Running"}
 
+@app.get("/analytics")
+def get_analytics():
+    cursor.execute("SELECT score, neck_tilt, shoulder_diff, spine_angle, timestamp FROM posture_data")
+    rows = cursor.fetchall()
+
+    if not rows:
+        return {}
+
+    scores = []
+    issues = []
+
+    one_week_ago = datetime.now() - timedelta(days=7)
+
+    weekly_scores = []
+
+    for row in rows:
+        score, neck, shoulder, spine, timestamp = row
+        time_obj = datetime.fromisoformat(timestamp)
+
+        scores.append(score)
+
+        # Weekly filter
+        if time_obj >= one_week_ago:
+            weekly_scores.append(score)
+
+        # Issue detection
+        if neck > 0.05:
+            issues.append("Forward Neck")
+
+        if shoulder > 0.05:
+            issues.append("Shoulder Imbalance")
+
+        if spine > 0.05:
+            issues.append("Spine Tilt")
+
+    # Stats
+    avg_score = sum(scores) / len(scores)
+    best_score = max(scores)
+
+    # Weekly improvement
+    if len(weekly_scores) >= 2:
+        improvement = weekly_scores[-1] - weekly_scores[0]
+    else:
+        improvement = 0
+
+    # Most common issue
+    most_common = Counter(issues).most_common(1)
+    common_issue = most_common[0][0] if most_common else "None"
+
+    return {
+        "average": round(avg_score, 2),
+        "best": best_score,
+        "improvement": round(improvement, 2),
+        "common_issue": common_issue
+    }
 
 
-import base64
+
+
+
+
+
+
 
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
@@ -44,6 +151,22 @@ async def analyze(file: UploadFile = File(...)):
     # ===== Extract features =====
     features = extract_features(landmarks)
     score = calculate_score(features)
+    # ===== SAVE TO DATABASE =====
+
+    cursor.execute("""
+INSERT INTO posture_data (score, neck_tilt, shoulder_diff, spine_angle, hip_diff, timestamp)
+VALUES (?, ?, ?, ?, ?, ?)
+""", (
+    score,
+    features["neck_tilt"],
+    features["shoulder_diff"],
+    features["spine_angle"],
+    features["hip_diff"],
+    datetime.now().isoformat()
+))
+
+    conn.commit()
+
 
     # ===== Feedback =====
     def get_posture_feedback(features):
@@ -144,3 +267,20 @@ async def generate_report_api(file: UploadFile = File(...)):
         media_type="application/pdf",
         filename="Posture_Report.pdf"
     )
+
+@app.get("/history")
+def get_history():
+    cursor.execute("SELECT * FROM posture_data")
+    rows = cursor.fetchall()
+
+    data = []
+    for row in rows:
+        data.append({
+            "score": row[1],
+            "neck_tilt": row[2],
+            "shoulder_diff": row[3],
+            "spine_angle": row[4],
+            "timestamp": row[5]
+        })
+
+    return data
