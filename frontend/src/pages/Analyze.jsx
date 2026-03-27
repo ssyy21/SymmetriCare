@@ -1,7 +1,9 @@
 import Webcam from "react-webcam";
 import axios from "axios";
 import { useRef, useState, useEffect } from "react";
+
 import { useNavigate } from "react-router-dom";
+
 
 function Analyze() {
   const webcamRef = useRef(null);
@@ -9,7 +11,12 @@ function Analyze() {
   const [score, setScore] = useState(null);
   const [messages, setMessages] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
+
   const navigate = useNavigate();
+
+// // this is for stars
+//   const [particles, setParticles] = useState([]);
+// >>>>>>> 5815b9199ef1cbe3b5c0e19c708b8781f8f1458c
 
   const captureAndAnalyze = async () => {
     if (!webcamRef.current) return;
@@ -97,11 +104,59 @@ const handleToggle = async () => {
 
     return () => clearInterval(interval);
   }, [isRunning]);
+  // this is for stars
+  useEffect(() => {
+    const p = Array.from({ length: 20 }).map(() => ({
+      left: Math.random() * 100 + "%",
+      top: Math.random() * 100 + "%",
+      size: 2 + Math.random() * 3,
+      opacity: 0.2 + Math.random() * 0.5,
+    }));
+    setParticles(p);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-6">
+    // <div className="min-h-screen bg-gradient-to-b from-[#0b1220] to-[#020617] text-white flex flex-col items-center pt-24 pb-10"> this is for stars
+    <div className="min-h-screen relative overflow-hidden bg-[#020617] text-white flex flex-col items-center pt-24 pb-20">
+    {/* BACKGROUND */}
 
-      <h1 className="text-3xl font-bold mb-6">SymmetriCare</h1>
+    <div className="absolute inset-0 pointer-events-none">
+
+      {/* grid */}
+      <div className="absolute inset-0 opacity-20"
+        style={{
+          backgroundImage:
+            "linear-gradient(#1f2937 1px, transparent 1px), linear-gradient(90deg,#1f2937 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+        }}
+      />
+
+      {/* radial glow */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.2),transparent_60%)]" />
+
+      {/* particles */}
+      {particles.map((p, i) => (
+        <div
+          key={i}
+          className="absolute bg-white rounded-full"
+          style={{
+            left: p.left,
+            top: p.top,
+            width: p.size,
+            height: p.size,
+            opacity: p.opacity,
+          }}
+        />
+      ))}
+
+    </div>  
+{/* 
+    stars end */}
+
+    <div className="relative z-10 flex flex-col items-center">
+      <h1 className="text-4xl font-bold mb-8 tracking-wide">
+        Live Posture Analysis
+      </h1>
 
       {/* CAMERA */}
       <Webcam
@@ -111,25 +166,25 @@ const handleToggle = async () => {
       />
 
       {/* BUTTON */}
-      <div className="flex gap-4 mt-4">
+      <div className="flex gap-4 mt-6">
 
 
   
 
   <button
     onClick={handleToggle}
-    className="px-6 py-2 bg-blue-500 rounded-lg hover:bg-blue-600"
+    className="px-6 py-2 bg-blue-500 rounded-lg hover:bg-blue-600 shadow-md"
   >
     {isRunning ? "Stop Analysis" : "Start Analysis"}
   </button>
 
   <button
     onClick={downloadReport}
-    className="px-6 py-2 bg-green-500 rounded-lg hover:bg-green-600"
+    className="px-6 py-2 bg-green-500 rounded-lg hover:bg-green-600 shadow-md"
   >
     Download Report
   </button>
-
+  </div>
 </div>
 
       {/* RESULTS */}
@@ -171,8 +226,27 @@ const handleToggle = async () => {
 
         </div>
       )}
+    {/* this is for home dash */}
+    <div className="mt-14 max-w-3xl w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-10 text-center shadow-lg">
+
+      <h2 className="text-3xl font-bold mb-4 text-purple-300">
+        Your spine will thank you.
+      </h2>
+
+      <p className="text-gray-400 mb-6">
+        View your posture history, track improvements, and monitor alignment in the dashboard.
+      </p>
+
+      <Link
+        to="/dashboard"
+        className="px-8 py-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg shadow-lg hover:scale-105 transition"
+      >
+        View Dashboard
+      </Link>
 
     </div>
+    </div>
+    
   );
 }
 
