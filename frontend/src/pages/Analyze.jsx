@@ -1,6 +1,7 @@
 import Webcam from "react-webcam";
 import axios from "axios";
 import { useRef, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 function Analyze() {
   const webcamRef = useRef(null);
@@ -8,6 +9,7 @@ function Analyze() {
   const [score, setScore] = useState(null);
   const [messages, setMessages] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
+  const navigate = useNavigate();
 
   const captureAndAnalyze = async () => {
     if (!webcamRef.current) return;
@@ -153,6 +155,19 @@ const handleToggle = async () => {
               </p>
             ))}
           </div>
+                  <button
+          onClick={() =>
+            navigate("/ai", {
+              state: {
+                score: score,
+                issues: messages,
+              },
+            })
+          }
+          className="mt-4 px-6 py-2 bg-purple-500 rounded-lg hover:bg-purple-600"
+        >
+          Get AI Insights
+        </button>
 
         </div>
       )}

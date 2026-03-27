@@ -2,6 +2,15 @@ from fastapi import FastAPI, UploadFile, File
 import cv2
 import numpy as np
 import base64
+import os
+from dotenv import load_dotenv
+import requests
+
+from fastapi import UploadFile, File
+import PyPDF2
+
+from fastapi import Body
+
 from fastapi.responses import FileResponse
 from pose.mediapipe_model import get_pose_landmarks
 from features.feature_extraction import extract_features
@@ -10,6 +19,39 @@ import sqlite3
 from datetime import datetime
 from collections import Counter
 from datetime import timedelta
+
+
+load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+def call_ai(prompt):
+    url = "https://openrouter.ai/api/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {GEMINI_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "model": "openrouter/auto",  # FREE model
+        "messages": [
+            {"role": "user", "content": prompt}
+        ]
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+
+    result = response.json()
+    print("AI RESPONSE:", result)  # debug
+
+    try:
+        return result["choices"][0]["message"]["content"]
+    except:
+        return "⚠️ AI failed. Please try again."
+
+
+
+
 
 conn = sqlite3.connect("posture.db", check_same_thread=False)
 cursor = conn.cursor()
@@ -46,6 +88,80 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.post("/ai-analysis")
+async def ai_analysis(data: dict):
+    try:
+        score = data.get("score")
+        issues = data.get("issues")
+
+        prompt = f"""
+        A student has posture issues: {issues}
+        Score: {score}
+
+        Explain clearly:
+        - Long term risks
+        - Health problems
+        - Exercises to fix it
+        - Daily posture tips
+
+        Keep it simple and helpful.
+        """
+
+        analysis = call_ai(prompt)
+
+        return {"analysis": analysis}
+
+    except Exception as e:
+        print("ERROR:", e)
+        return {"analysis": "Something went wrong in AI analysis"}
+
+@app.post("/ai-report-analysis")
+async def ai_report_analysis(file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
+
+        with open("temp.pdf", "wb") as f:
+            f.write(contents)
+
+        text = ""
+
+        with open("temp.pdf", "rb") as f:
+            reader = PyPDF2.PdfReader(f)
+
+            for page in reader.pages:
+                extracted = page.extract_text()
+                if extracted:
+                    text += extracted + "\n"
+
+        print("EXTRACTED TEXT:", text)
+
+        if not text.strip():
+            return {
+                "analysis": "⚠️ Could not read PDF properly. Try another report."
+            }
+
+        prompt = f"""
+        Analyze this posture report:
+
+        {text}
+
+        Explain clearly:
+        - posture issues
+        - long-term risks
+        - exercises to fix it
+        - improvement tips
+
+        Keep it student-friendly.
+        """
+
+        analysis = call_ai(prompt)
+
+        return {"analysis": analysis}
+
+    except Exception as e:
+        print("ERROR:", e)
+        return {"analysis": "Error processing report"}
 
 @app.post("/end-session")
 def end_session():

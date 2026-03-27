@@ -13,6 +13,7 @@ function Navbar() {
         <Link to="/analyze" className="hover:text-blue-400">Analyze</Link>
         <Link to="/resources" className="hover:text-blue-400">Resources</Link>
         <Link to="/dashboard">Dashboard</Link>
+        <Link to="/ai">AI Advisor</Link>
       </div>
 
     </div>

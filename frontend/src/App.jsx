@@ -4,6 +4,7 @@ import Analyze from "./pages/Analyze";
 import Resources from "./pages/Resources";
 import Navbar from "./components/Navbar";
 import Dashboard from "./pages/Dashboard";
+import AIInsights from "./pages/AIInsights";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/analyze" element={<Analyze />} />
         <Route path="/resources" element={<Resources />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/ai" element={<AIInsights />} />
       </Routes>
     </div>
   );
