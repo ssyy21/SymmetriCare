@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
-
+//ui changed
 function AIInsights() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
